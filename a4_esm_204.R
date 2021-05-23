@@ -4,9 +4,8 @@ library(here)
 library(janitor)
 library(kableExtra)
 options(scipen=0)
-setwd("~/Documents/UCSB/Spring2021/ESM204")
-damagesdata=read.csv("damages.csv")
-warmingdata=read.csv("warming.csv")
+damagesdata=read.csv(here("Data", "damages.csv"))
+warmingdata=read.csv(here("Data", "warming.csv"))
 #-----------------------------------------
 ### QUESTION 1
 #ggplot to check it out

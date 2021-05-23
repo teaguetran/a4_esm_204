@@ -1,0 +1,63 @@
+---
+title: ''
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(here)
+library(janitor)
+
+damages <- read_csv(here("Data", "damages.csv"))
+warming <- read_csv(here("Data", "warming.csv"))
+```
+```{r}
+ggplot(data = warming, aes(x = year, y = warming_baseline)) +
+  geom_line() +
+  geom_line(data = warming, aes(x = year, y = warming_pulse), color = "red")
+```
+
+```{r}
+ggplot(data = damages, aes(x = warming, y = damages)) +
+  geom_point() 
+```
+```{r}
+#fit in linear regression model
+linear_model <- lm(data = damages, formula = warming ~ damages)
+
+#call summary
+summary(linear_model)
+```
+
+```{r}
+#create a new variable for damage^2
+damages$damages2 <- damages$damages^2
+
+ggplot(data = damages, aes(x = warming, y = damages2)) +
+  geom_point()
+
+quadratic_model <- lm(data = damages, formula = warming ~ damages + damages2)
+
+summary(quadratic_model)
+```
+```{r}
+#quadratic model with warming 
+damages$warming2 <- damages$warming^2
+
+quadratic_model_warming <- lm(data = damages, formula = damages ~ warming + warming2)
+
+summary(quadratic_model_warming)
+```
+
+
+```{r}
+predict_damages <- predict() 
+
+```
+
+
+

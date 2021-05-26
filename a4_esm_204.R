@@ -73,9 +73,9 @@ pv(appended$diff_co2, discount_rate)
 scc <- data.frame(discount_rate<-discount_rate, scc<-pv(appended$diff_co2, discount_rate))
 colnames(scc) = c("discount_rate", "scc")
 #plot
-ggplot(scc, aes(x=discount_rate, y=scc))+
+ggplot(scc, aes(x=discount_rate, y=scc)) +
   labs(y="Cost ($)", x="Discount Rate", title="Social Cost of Carbon") +
-  geom_line(color="salmon2")+
+  geom_line(color="salmon2") +
   theme_bw()
 #-----------------------------------------
 #QUESTION 4
@@ -111,5 +111,36 @@ ggplot(scc, aes(x=discount_rate, y=scc))+
              alpha = 0.6)+
   labs(y="Cost ($)", x="Discount Rate", title="Social Cost of Carbon") +
   geom_line(color="salmon2")+
-  theme_bw() 
+  theme_bw()+
+  geom_point(aes(x=0.021, y=68.378453), shape=19, size=3, colour = "black")+
+  annotate(geom="text", x=0.033, y=75, label="(0.021, 68.378)")
+
+#------------------------------------------
+#QUESTION 5
+
+quadratic = fit2$coefficient[3]*warming^2 + fit2$coefficient[2]*warming
+
+baseline <- pv(appended$damages_baseline, discount_rate)
+
+#baseline * 1.5
+baseline_15 <- appended$warming_baseline*1.5
+damages_15 = fit2$coefficient[3] * baseline_15^2 + fit2$coefficient[2] * baseline_15
+
+warmingx15 =data.frame(appended$year, appended$warming_baseline, damages_15)
+
+baseline_15_damages <- pv(warmingx15$damages_15, discount_rate) 
+
+policyA = data.frame(discount_rate, baseline, baseline_15_damages)
+
+#Policy B
+
+stable = rep(1.29, 50)
+warming30years=appended[1:30, 3]
+polbwarming=c(warming30years,stable)
+#damage function
+damagepolb=fit2$coefficient[3]*polbwarming^2 + fit2$coefficient[2]*polbwarming
+
+pv_B = pv(damagepolb, discount_rate)
+PolicyB = data.frame(discount_rate, pv_B)
+colnames(PolicyB) = c("Discount Rate", "Present Value")
 

@@ -21,7 +21,6 @@ warming_df=read.csv(here("Data", "warming.csv"))
 attach(damages_df)
 quad<-lm(damages~poly(warming,2,raw=TRUE))
 quadratic = quad$coefficient[3]*warming^2 + quad$coefficient[2]*warming
-quadratic
 ggplot(damages_df, aes(x=warming, y=damages))+
   geom_point(col="black", size=1)+
   geom_line(aes(x=warming, y=quadratic), col="blue", size = 1.5)+
@@ -41,7 +40,7 @@ append <- warming_df %>%
 #1: damages at baseline
 ggplot(append, aes(x=year, y=damages_baseline))+
   labs(y="Damages ($)", x="Year", title="Baseline Damages (no pulse)") +
-  geom_point(color="blue")+
+  geom_point(color="black")+
   theme_minimal()
 #2: damages with pulse
 ggplot(append, aes(x=year, y=damages_pulse))+
@@ -76,7 +75,7 @@ scc <- data.frame(discount_rate<-discount_rate, scc<-pv(append$diff_co2, discoun
 colnames(scc) = c("discount_rate", "scc")
 #plot
 ggplot(scc, aes(x=discount_rate, y=scc)) + #plot scc
-  labs(y="Cost ($)", x="Discount Rate", title="Social Cost of Carbon") +
+  labs(y="Cost ($/ton of CO2)", x="Discount Rate", title="Social Cost of Carbon") +
   geom_line(color="blue", size = 1) +
   theme_minimal()
 ```
@@ -112,7 +111,7 @@ ggplot(scc, aes(x=discount_rate, y=scc))+
              color = "blue", 
              size=1, 
              alpha = 0.6) + 
-  labs(y="Cost ($)", x="Discount Rate", title="Social Cost of Carbon") +
+  labs(y="Cost ($/ton of CO2)", x="Discount Rate", title="Social Cost of Carbon") +
   geom_line(color="black", size = 1)+
   theme_bw()+
   geom_point(aes(x=0.021, y=PV_optimum), shape=19, size=3, colour = "black")+
@@ -124,9 +123,10 @@ ggplot(scc, aes(x=discount_rate, y=scc))+
 ```{r}
 #QUESTION 5
 
-quadratic = quad$coefficient[3]*warming^2 + quad$coefficient[2]*warming
+#Policy A
+#baseline
 
-baseline <- pv(append$damages_baseline, discount_rate) 
+baseline <- pv(append$damages_baseline, discount_rate) #create pv of baseline @ discount rate of 2% and put into object
 
 #baseline * 1.5
 baseline_15 <- append$warming_baseline*1.5

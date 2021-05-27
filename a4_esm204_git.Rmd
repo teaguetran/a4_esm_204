@@ -8,56 +8,161 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
+#set up 
 library(tidyverse)
+library(lubridate)
 library(here)
 library(janitor)
-
-damages <- read_csv(here("Data", "damages.csv"))
-warming <- read_csv(here("Data", "warming.csv"))
+library(kableExtra)
+options(scipen=0)
+damages_df <- read_csv(here("Data", "damages.csv"))
+warming_df <- read_csv(here("Data", "warming.csv"))
 ```
 ```{r}
-ggplot(data = warming, aes(x = year, y = warming_baseline)) +
-  geom_line() +
-  geom_line(data = warming, aes(x = year, y = warming_pulse), color = "red")
-```
-
-```{r}
-ggplot(data = damages, aes(x = warming, y = damages)) +
-  geom_point() 
-```
-```{r}
-#fit in linear regression model
-linear_model <- lm(data = damages, formula = warming ~ damages)
-
-#call summary
-summary(linear_model)
-```
-
-```{r}
-#create a new variable for damage^2
-damages$damages2 <- damages$damages^2
-
-ggplot(data = damages, aes(x = warming, y = damages2)) +
+### QUESTION 1
+#look at data
+ggplot(damages_df, aes(x=warming, y=damages))+
   geom_point()
+#putting quadratic formula
+attach(damages_df)
+plot(warming, damages, main="Scatterplot", pch=19)
+quad<-lm(damages~poly(warming,2,raw=TRUE))
+quad$coefficient[1]
+quad$coefficient[2]
+quad$coefficient[3]
+quadratic = quad$coefficient[3]*warming^2 + quad$coefficient[2]*warming
+ggplot(damages_df, aes(x=warming, y=damages))+
+  geom_point(col="black", size=1)+
+  geom_line(aes(x=warming, y=quadratic), col="blue", size = 1.5)+
+  theme_bw()+
+  labs(x="Warming (deg C)", y="Damage ($)", title="Annual Damages from Climate Change")
 
-quadratic_model <- lm(data = damages, formula = warming ~ damages + damages2)
+#heavy overlap with pulse and baseline
+# ggplot(data = warming_df, aes(x = year, y = warming_baseline)) +
+#   geom_point() +
+#   geom_point(data = warming_df, aes(x = year, y = warming_pulse), color = "red")
+```
 
-summary(quadratic_model)
+```{r}
+### QUESTION 2
+damages_baseline=quad$coefficient[3]*warming_df$warming_baseline^2 + quad$coefficient[2]*warming_df$warming_baseline #use equation found in #1 to estimate new curve
+damages_pulse=quad$coefficient[3]*warming_df$warming_pulse^2 + quad$coefficient[2]*warming_df$warming_pulse #use equation found in #1 to estimate new curve with pulse
+combined <- warming_df %>% 
+  mutate(damages_baseline = damages_baseline) %>% 
+  mutate(damages_pulse = damages_pulse) %>% 
+  mutate(damages_diff= damages_pulse - damages_baseline) %>% 
+  mutate(diff_co2=damages_diff/35000000000) #divide by 35000000000 to get 
+#1: damages at baseline
+ggplot(combined, aes(x=year, y=damages_baseline))+
+  labs(y="Damages ($)", x="Year", title="Baseline Damages (no pulse)") +
+  geom_point(color="black")+
+  theme_minimal()
+#2: damages with pulse
+ggplot(combined, aes(x=year, y=damages_pulse))+
+  labs(y="Damage ($)", x="Year", title="Damages (with Pulse)") +
+  geom_point(color="black")+
+  theme_minimal()
+#3: difference in damage over time from baseline vs w/ pulse
+ggplot(combined, aes(x=year, y=damages_diff))+
+  labs(y="Damage ($)", x="Year", title="Difference in Damages With Pulse and Baseline Damages (pulse - baseline)") +
+  geom_point(color="red")+
+  theme_minimal()
+#4: difference in damages over time from the pulse per ton of CO2 
+ggplot(combined, aes(x=year, y=diff_co2))+
+  labs(y="Damage ($)", x="Year", title="Difference in Damages per ton of CO2") +
+  geom_point(color="blue")+
+  theme_minimal()
 ```
 ```{r}
-#quadratic model with warming 
-damages$warming2 <- damages$warming^2
-
-quadratic_model_warming <- lm(data = damages, formula = damages ~ warming + warming2)
-
-summary(quadratic_model_warming)
+pv <- function(num, r) { # r = discount rate
+  sum <- 0; #start with sum = 0; this is present value. Since we are not looking at anything yet, we start at 0
+  for(t in c(1:length(num))){ # for t, we look at the length (how many data points) are in num. Since num will be the number of years we'll be looking at, this code will give us our final t
+    present <- num[t]/(1+r)^t #PV equation
+    sum <- sum+present #add sum + present into sum; basically accumulating all values of pv for all t
+  }
+  return(sum)
+}
+discount_rate <- seq(.01, .2, .001) #looking at a discount rate between .01 and .2 at a .001 interval
+pv(combined$diff_co2, discount_rate) #use function from above to determine pv
+scc <- data.frame(discount_rate<-discount_rate, scc<-pv(combined$diff_co2, discount_rate)) #determine social cost of carbon
+colnames(scc) = c("discount_rate", "scc")
+#plot
+ggplot(scc, aes(x=discount_rate, y=scc)) + #plot scc
+  labs(y="Cost ($)", x="Discount Rate", title="Social Cost of Carbon") +
+  geom_line(color="blue", size = 1) +
+  theme_minimal()
 ```
-
 
 ```{r}
-predict_damages <- predict() 
+#create function to find ramsey DR
+find_dr <- function(p, n, g){
+  r <- p + n*g
+}
+
+
+dr_optimum <- find_dr(.001, 2, .01) #use function for Ramsey DR to determine optimum discount rate (.21)
+
+dr_optimum
+
+PV_optimum <- pv(combined$diff_co2, dr_optimum) #find the present value 
+
+
+#from Q3
+discount_rate <- seq(.01, .2, .001)
+pv(combined$diff_co2, discount_rate)
+scc <- data.frame(discount_rate<-discount_rate, scc<-pv(combined$diff_co2, discount_rate))
+colnames(scc) = c("discount_rate", "scc")
+#plot
+ggplot(scc, aes(x=discount_rate, y=scc))+
+  geom_vline(xintercept = dr_optimum, 
+             linetype = "dashed", 
+             color = "red", 
+             size=1, 
+             alpha = 0.6)+
+  geom_hline(yintercept = PV_optimum,
+               linetype = "dashed", 
+             color = "blue", 
+             size=1, 
+             alpha = 0.6) + 
+  labs(y="Cost ($)", x="Discount Rate", title="Social Cost of Carbon") +
+  geom_line(color="black", size = 1)+
+  theme_bw()+
+  geom_point(aes(x=0.021, y=PV_optimum), shape=19, size=3, colour = "black")+
+  annotate(geom="text", x=0.04, y=72, label="(0.021, 68.378)")
 
 ```
+```{r}
+quadratic = quad$coefficient[3]*warming^2 + quad$coefficient[2]*warming
+
+baseline <- pv(combined$damages_baseline, discount_rate)
+
+#baseline * 1.5
+baseline_15 <- combined$warming_baseline*1.5
+damages_15 = quad$coefficient[3] * baseline_15^2 + quad$coefficient[2] * baseline_15
+
+warmingx15 =data.frame(combined$year, combined$warming_baseline, damages_15)
+
+baseline_15_damages <- pv(warmingx15$damages_15, discount_rate) 
+
+policyA = data.frame(discount_rate, baseline, baseline_15_damages)
+
+#Policy B
+
+constant_temp <- data.frame(rep (1.29, times = 50)) %>% 
+  mutate(warming_baseline = rep (1.29, times = 50)) %>% 
+  select(warming_baseline)
+first_30years <- combined[1:30,3]
+
+tempto2100 <- rbind(first_30years,constant_temp)
+
+#damage function
+damagepolb= quad$coefficient[3]*tempto2100^2 + quad$coefficient[2]*tempto2100
+
+pv_B = pv(damagepolb, discount_rate)
+PolicyB = data.frame(discount_rate, pv_B)
+colnames(PolicyB) = c("Discount Rate", "Present Value")
+```
+
 
 
 

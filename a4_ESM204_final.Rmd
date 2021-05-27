@@ -1,79 +1,67 @@
 ---
-title: ''
+title: "adladslkd"
 output: html_document
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 ```{r}
-#set up 
 library(tidyverse)
 library(lubridate)
 library(here)
 library(janitor)
 library(kableExtra)
 options(scipen=0)
-damages_df <- read_csv(here("Data", "damages.csv"))
-warming_df <- read_csv(here("Data", "warming.csv"))
+damages_df=read.csv(here("Data", "damages.csv"))
+warming_df=read.csv(here("Data", "warming.csv"))
 ```
 ```{r}
 ### QUESTION 1
-#look at data
-ggplot(damages_df, aes(x=warming, y=damages))+
-  geom_point()
+# #look at data
+# ggplot(damages_df, aes(x=warming, y=damages))+
+#   geom_point()
 #putting quadratic formula
 attach(damages_df)
-plot(warming, damages, main="Scatterplot", pch=19)
 quad<-lm(damages~poly(warming,2,raw=TRUE))
-quad$coefficient[1]
-quad$coefficient[2]
-quad$coefficient[3]
 quadratic = quad$coefficient[3]*warming^2 + quad$coefficient[2]*warming
+quadratic
 ggplot(damages_df, aes(x=warming, y=damages))+
   geom_point(col="black", size=1)+
   geom_line(aes(x=warming, y=quadratic), col="blue", size = 1.5)+
   theme_bw()+
   labs(x="Warming (deg C)", y="Damage ($)", title="Annual Damages from Climate Change")
-
-#heavy overlap with pulse and baseline
-# ggplot(data = warming_df, aes(x = year, y = warming_baseline)) +
-#   geom_point() +
-#   geom_point(data = warming_df, aes(x = year, y = warming_pulse), color = "red")
 ```
 
 ```{r}
 ### QUESTION 2
 damages_baseline=quad$coefficient[3]*warming_df$warming_baseline^2 + quad$coefficient[2]*warming_df$warming_baseline #use equation found in #1 to estimate new curve
 damages_pulse=quad$coefficient[3]*warming_df$warming_pulse^2 + quad$coefficient[2]*warming_df$warming_pulse #use equation found in #1 to estimate new curve with pulse
-combined <- warming_df %>% 
+append <- warming_df %>% 
   mutate(damages_baseline = damages_baseline) %>% 
   mutate(damages_pulse = damages_pulse) %>% 
   mutate(damages_diff= damages_pulse - damages_baseline) %>% 
   mutate(diff_co2=damages_diff/35000000000) #divide by 35000000000 to get 
 #1: damages at baseline
-ggplot(combined, aes(x=year, y=damages_baseline))+
+ggplot(append, aes(x=year, y=damages_baseline))+
   labs(y="Damages ($)", x="Year", title="Baseline Damages (no pulse)") +
-  geom_point(color="black")+
+  geom_point(color="blue")+
   theme_minimal()
 #2: damages with pulse
-ggplot(combined, aes(x=year, y=damages_pulse))+
+ggplot(append, aes(x=year, y=damages_pulse))+
   labs(y="Damage ($)", x="Year", title="Damages (with Pulse)") +
   geom_point(color="black")+
   theme_minimal()
 #3: difference in damage over time from baseline vs w/ pulse
-ggplot(combined, aes(x=year, y=damages_diff))+
+ggplot(append, aes(x=year, y=damages_diff))+
   labs(y="Damage ($)", x="Year", title="Difference in Damages With Pulse and Baseline Damages (pulse - baseline)") +
-  geom_point(color="red")+
+  geom_point(color="black")+
   theme_minimal()
 #4: difference in damages over time from the pulse per ton of CO2 
-ggplot(combined, aes(x=year, y=diff_co2))+
+ggplot(append, aes(x=year, y=diff_co2))+
   labs(y="Damage ($)", x="Year", title="Difference in Damages per ton of CO2") +
-  geom_point(color="blue")+
+  geom_point(color="black")+
   theme_minimal()
 ```
+
 ```{r}
+#QUESTION 3
 pv <- function(num, r) { # r = discount rate
   sum <- 0; #start with sum = 0; this is present value. Since we are not looking at anything yet, we start at 0
   for(t in c(1:length(num))){ # for t, we look at the length (how many data points) are in num. Since num will be the number of years we'll be looking at, this code will give us our final t
@@ -83,8 +71,8 @@ pv <- function(num, r) { # r = discount rate
   return(sum)
 }
 discount_rate <- seq(.01, .2, .001) #looking at a discount rate between .01 and .2 at a .001 interval
-pv(combined$diff_co2, discount_rate) #use function from above to determine pv
-scc <- data.frame(discount_rate<-discount_rate, scc<-pv(combined$diff_co2, discount_rate)) #determine social cost of carbon
+pv(append$diff_co2, discount_rate) #use function from above to determine pv
+scc <- data.frame(discount_rate<-discount_rate, scc<-pv(append$diff_co2, discount_rate)) #determine social cost of carbon
 colnames(scc) = c("discount_rate", "scc")
 #plot
 ggplot(scc, aes(x=discount_rate, y=scc)) + #plot scc
@@ -92,7 +80,6 @@ ggplot(scc, aes(x=discount_rate, y=scc)) + #plot scc
   geom_line(color="blue", size = 1) +
   theme_minimal()
 ```
-
 ```{r}
 # Question 4
 #create function to find ramsey DR
@@ -105,7 +92,7 @@ dr_optimum <- find_dr(.001, 2, .01) #use function for Ramsey DR to determine opt
 
 dr_optimum
 
-PV_optimum <- pv(combined$diff_co2, dr_optimum) #find the present value 
+PV_optimum <- pv(append$diff_co2, dr_optimum) #find the present value 
 
 
 # #from Q3
@@ -132,18 +119,20 @@ ggplot(scc, aes(x=discount_rate, y=scc))+
   annotate(geom="text", x=0.04, y=72, label="(0.021, 68.378)")
 
 ```
+
+
 ```{r}
-#Question 5
+#QUESTION 5
 
 quadratic = quad$coefficient[3]*warming^2 + quad$coefficient[2]*warming
 
-baseline <- pv(combined$damages_baseline, discount_rate) 
+baseline <- pv(append$damages_baseline, discount_rate) 
 
 #baseline * 1.5
-baseline_15 <- combined$warming_baseline*1.5
+baseline_15 <- append$warming_baseline*1.5
 damages_15 = quad$coefficient[3] * baseline_15^2 + quad$coefficient[2] * baseline_15
 
-warmingx15 =data.frame(combined$year, combined$warming_baseline, damages_15)
+warmingx15 =data.frame(append$year, append$warming_baseline, damages_15)
 
 baseline_15_damages <- pv(warmingx15$damages_15, discount_rate)
 
@@ -155,25 +144,20 @@ expected_value <- function(p1, p2, x1, x2) {
 }
 
 exp_valA <- expected_value( .5, .5, policyA[1,2], policyA[1,3])
+
 #Policy B
 
 stable = rep(1.29, 50)
-warming30years=combined[1:30,3]
-polbwarming = c(warming30years,stable)
-
-constant_temp <- data.frame(rep (1.29, times = 50)) %>% 
-  mutate(warming_baseline = rep (1.29, times = 50)) %>% 
-  select(warming_baseline)
-first_30years <- combined[1:30,3]
-
-tempto2100 <- rbind(first_30years,constant_temp)
-
+warming30years=append[1:30, 3]
+polbwarming=c(warming30years,stable)
 #damage function
-damagepolb= quad$coefficient[3]*tempto2100^2 + quad$coefficient[2]*tempto2100
+damagepolb=quad$coefficient[3]*polbwarming^2 + quad$coefficient[2]*polbwarming
 
-pv_B = pv(damagepolb, .02)
+exp_valB = pv(damagepolb, .02)
+
+#Cost for B to still make economic sense 
+
+exp_valA - exp_valB 
+
 ```
-
-
-
 

@@ -31,8 +31,8 @@ ggplot(damages_df, aes(x=warming, y=damages))+
 
 ```{r}
 ### QUESTION 2
-damages_baseline=quad$coefficient[3]*warming_df$warming_baseline^2 + quad$coefficient[2]*warming_df$warming_baseline #use equation found in #1 to estimate new curve
-damages_pulse=quad$coefficient[3]*warming_df$warming_pulse^2 + quad$coefficient[2]*warming_df$warming_pulse #use equation found in #1 to estimate new curve with pulse
+damages_baseline=quad$coefficient[3]*warming_df$warming_baseline^2 + quad$coefficient[2]*warming_df$warming_baseline #use quadratic equation found in #1 to estimate new curve
+damages_pulse=quad$coefficient[3]*warming_df$warming_pulse^2 + quad$coefficient[2]*warming_df$warming_pulse #use quadratic equation found in #1 to estimate new curve with pulse
 append <- warming_df %>% 
   mutate(damages_baseline = damages_baseline) %>% 
   mutate(damages_pulse = damages_pulse) %>% 
@@ -62,10 +62,10 @@ ggplot(append, aes(x=year, y=diff_co2))+
 
 ```{r}
 #QUESTION 3
-pv <- function(num, r) { # r = discount rate
+pv <- function(dam, r) { # r = discount rate
   sum <- 0; #start with sum = 0; this is present value. Since we are not looking at anything yet, we start at 0
-  for(t in c(1:length(num))){ # for t, we look at the length (how many data points) are in num. Since num will be the number of years we'll be looking at, this code will give us our final t
-    present <- num[t]/(1+r)^t #PV equation
+  for(t in c(1:length(dam))){ # for t, we look at the length (how many data points) are in dam. Since dam will be the number of years we'll be looking at, this code will give us our final t
+    present <- dam[t]/(1+r)^t #PV equation
     sum <- sum+present #add sum + present into sum; basically accumulating all values of pv for all t
   }
   return(sum)
@@ -147,13 +147,13 @@ exp_valA <- expected_value( .5, .5, policyA[1,2], policyA[1,3])
 
 #Policy B
 
-stable = rep(1.29, 50)
+stable50years = rep(1.29, 50)
 warming30years=append[1:30, 3]
-polbwarming=c(warming30years,stable)
+policyb_warming=c(warming30years,stable50years)
 #damage function
-damagepolb=quad$coefficient[3]*polbwarming^2 + quad$coefficient[2]*polbwarming
+policyb_damages=quad$coefficient[3]*policyb_warming^2 + quad$coefficient[2]*policyb_warming
 
-exp_valB = pv(damagepolb, .02)
+exp_valB = pv(policyb_damages, .02)
 
 #Cost for B to still make economic sense 
 
